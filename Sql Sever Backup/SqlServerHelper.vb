@@ -2,16 +2,44 @@
 Imports System.Collections.Generic
 
 Public Class SqlServerHelper
-    Public connectionString As String = "Data Source=srcappserver;Initial Catalog=ALC_QCreport;User Id=QCaDmin;Password=Alucon@500;"
-
+    Public connectionString As String = "Data Source=localhost;Initial Catalog=master;Integrated Security=True"
     Private conn As SqlConnection
-    Public Sub New(conf As String)
-        If conf IsNot Nothing AndAlso Not String.IsNullOrEmpty(conf.ToString()) Then
-            If TestConnection(conf) Then
-                connectionString = conf.ToString()
-            End If
+    Public Function GetSqlConnectionString(server As String, Optional database As String = "", Optional username As String = "", Optional password As String = "") As String
+        ' Build the connection string
+        Dim connectionStringBuilder As New SqlConnectionStringBuilder()
+        ' Set the server
+        connectionStringBuilder.DataSource = server
+        ' Set the database if provided
+        If Not String.IsNullOrEmpty(database) Then
+            connectionStringBuilder.InitialCatalog = database
+        Else
+            connectionStringBuilder.InitialCatalog = "master"
         End If
-    End Sub
+
+        ' Set the username and password if provided
+        If Not String.IsNullOrEmpty(username) Then
+            connectionStringBuilder.UserID = username
+        Else
+            ' Use Windows authentication (Integrated Security=True)
+            connectionStringBuilder.IntegratedSecurity = True
+        End If
+
+        If Not String.IsNullOrEmpty(password) Then
+            connectionStringBuilder.Password = password
+        End If
+        ' Add other optional settings if needed
+        connectionStringBuilder.ConnectTimeout = 30
+        ' Return the connection string
+        Return connectionStringBuilder.ToString()
+    End Function
+
+    'Public Sub New(conf As String)
+    '    If conf IsNot Nothing AndAlso Not String.IsNullOrEmpty(conf.ToString()) Then
+    '        If TestConnection(conf) Then
+    '            connectionString = conf.ToString()
+    '        End If
+    '    End If
+    'End Sub
 
     Public Function TestConnection(conn As String) As Boolean
         Try
@@ -44,7 +72,6 @@ Public Class SqlServerHelper
         Try
             Using conn As New SqlConnection(connectionString)
                 conn.Open()
-
                 ' Query to get all database names
                 Dim query As String = "SELECT name FROM sys.databases"
 

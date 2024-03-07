@@ -42,7 +42,6 @@ Public Class FileEncryptor
         For i As Integer = 0 To chrData.GetUpperBound(0)
             bytDataToHash(i) = CByte(Asc(chrData(i)))
         Next
-
         Dim SHA512 As New System.Security.Cryptography.SHA512Managed
         Dim bytResult As Byte() = SHA512.ComputeHash(bytDataToHash)
         Dim bytIV(15) As Byte
@@ -74,27 +73,31 @@ Public Class FileEncryptor
                     csCryptoStream = New CryptoStream(fsOutput, cspRijndael.CreateDecryptor(bytKey, bytIV), CryptoStreamMode.Write)
             End Select
 
-
-
             While lngBytesProcessed < lngFileLength
                 intBytesInCurrentBlock = fsInput.Read(bytBuffer, 0, 4096)
                 csCryptoStream.Write(bytBuffer, 0, intBytesInCurrentBlock)
-                lngBytesProcessed = lngBytesProcessed + CLng(intBytesInCurrentBlock)
-
+                lngBytesProcessed += CLng(intBytesInCurrentBlock)
             End While
 
+            ' Ensure that CryptoStream and FileStream are closed
             csCryptoStream.Close()
             fsInput.Close()
             fsOutput.Close()
 
             If Direction = CryptoAction.ActionEncrypt Then
-                Dim fileOriginal As New FileInfo(strFileToEncrypt)
-                fileOriginal.Delete()
+                ' Check for file existence before deletion
+                If File.Exists(strFileToEncrypt) Then
+                    Dim fileOriginal As New FileInfo(strFileToEncrypt)
+                    fileOriginal.Delete()
+                End If
             End If
 
             If Direction = CryptoAction.ActionDecrypt Then
-                Dim fileEncrypted As New FileInfo(strFileToDecrypt)
-                fileEncrypted.Delete()
+                ' Check for file existence before deletion
+                If File.Exists(strFileToDecrypt) Then
+                    Dim fileEncrypted As New FileInfo(strFileToDecrypt)
+                    fileEncrypted.Delete()
+                End If
             End If
 
             Dim Wrap As String = Chr(13) + Chr(10)
@@ -104,10 +107,13 @@ Public Class FileEncryptor
                 MessageBox.Show("Decryption Complete" + Wrap + Wrap + "Total bytes processed = " + lngBytesProcessed.ToString, "Done", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
 
-
         Catch ex As Exception
             ' Handle exceptions here
-            Throw New Exception("Error during encryption/decryption: " & ex.Message)
+            MessageBox.Show(ex.Message, "Error during encryption/decryption: ")
+        Finally
+            ' Ensure that FileStreams are closed in case of an exception
+            If fsInput IsNot Nothing Then fsInput.Close()
+            If fsOutput IsNot Nothing Then fsOutput.Close()
         End Try
     End Sub
 
